@@ -22,7 +22,7 @@ st.title("🚗 AI Car Damage Detection & Insurance Assistant")
 # -------------------------
 @st.cache_resource
 def load_model():
-    model = YOLO("runs/detect/train8/weights/best.pt")  # Path to your trained YOLOv8 model
+    model = YOLO("best.pt")  # Path to your trained YOLOv8 model
     return model
 
 # -------------------------
