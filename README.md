@@ -8,7 +8,7 @@
   - **Insurance claim guidance**
 - Built with **YOLOv8, Streamlit, OpenCV, and Groq AI**
 
-## ✨ Features
+# ✨ Features
 
 - Detects **multiple damages** in a single car image
 - Supports **22 damage classes** (dents, scratches, bumper damage, windscreen damage)
@@ -17,7 +17,7 @@
 - Includes **rule-based severity check** for large damage areas
 - **User-friendly Streamlit interface** with annotated images
 
-# ** Tech Stack **
+#  Tech Stack 
 
 - Python 3.12 – Core programming language
 
@@ -33,13 +33,13 @@
 
 - Pandas & NumPy – Data handling and processing
 
-# ** 📊 Dataset **
+#  📊 Dataset 
 
 Trained on 22 damage classes
 
 ['Front-Windscreen-Damage', 'Headlight-Damage', 'Major-Rear-Bumper-Dent', 'Rear-windscreen-Damage', 'RunningBoard-Dent', 'Sidemirror-Damage', 'Signlight-Damage', 'Taillight-Damage', 'bonnet-dent', 'doorouter-dent', 'doorouter-scratch', 'fender-dent', 'front-bumper-dent', 'front-bumper-scratch', 'medium-Bodypanel-Dent', 'paint-chip', 'paint-trace', 'pillar-dent', 'quaterpanel-dent', 'rear-bumper-dent', 'rear-bumper-scratch', 'roof-dent']
 
-# ** 📂 Project Structure **
+#  📂 Project Structure 
 
 car-damage-ai/
 ├─ app.py                  # Main Streamlit app
@@ -47,7 +47,7 @@ car-damage-ai/
 ├─ runs/detect/train8/     # YOLOv8 trained weights folder
 ├─ assets/                 # Optional demo images/screenshots
 
-# ** 💡 Future Improvements **
+#  💡 Future Improvements 
 
 Combine all detected damages in a single AI prompt for more accurate overall severity
 
