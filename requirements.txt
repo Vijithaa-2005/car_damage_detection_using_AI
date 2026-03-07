@@ -1,0 +1,11 @@
+
+YOLOv8
+streamlit
+ultralytics
+opencv-python
+pillow
+numpy
+pandas
+requests
+reportlab
+openai
