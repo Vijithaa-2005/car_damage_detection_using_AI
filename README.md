@@ -1,61 +1,61 @@
-🚗 AI Car Damage Detection & Insurance Assistant
+# 🚗 AI Car Damage Detection & Insurance Assistant
 
-An AI-powered web application that detects multiple types of car damages from uploaded images and provides repair suggestions, severity assessment, estimated repair time & cost, and insurance claim guidance. Built with YOLOv8, Streamlit, OpenCV, and Groq AI.
+- **AI-powered web application** that detects multiple car damages
+- Provides:
+  - **Repair suggestions**
+  - **Severity assessment**
+  - **Estimated repair time & cost**
+  - **Insurance claim guidance**
+- Built with **YOLOv8, Streamlit, OpenCV, and Groq AI**
 
-Features
+## ✨ Features
 
-Detects multiple damages in a single car image.
+- Detects **multiple damages** in a single car image
+- Supports **22 damage classes** (dents, scratches, bumper damage, windscreen damage)
+- Provides **AI-generated repair suggestions, severity, estimated repair time & cost, and insurance claim feasibility**
+- Generates **downloadable PDF reports**
+- Includes **rule-based severity check** for large damage areas
+- **User-friendly Streamlit interface** with annotated images
 
-Supports 22 damage classes (e.g., dents, scratches, bumper damage, windscreen damage, etc.).
+# ** Tech Stack **
 
-Provides AI-generated repair suggestions, severity assessment, estimated repair time & cost, and insurance claim possibilities.
+- Python 3.12 – Core programming language
 
-Generates a downloadable PDF report with damage details and AI assessment.
+- Streamlit – Interactive web interface
 
-Rule-based check for large damage areas to flag severe cases.
+- YOLOv8 (Ultralytics) – Object detection for car damages
 
-User-friendly Streamlit interface with annotated images.
+- OpenCV – Image processing and annotation
 
-Demo
+- Groq API (LLaMA 3) – AI-based repair and insurance assessment
 
+- ReportLab – PDF report generation
 
+- Pandas & NumPy – Data handling and processing
 
-Tech Stack
+# ** 📊 Dataset **
 
-Python 3.12
+Trained on 22 damage classes
 
-Streamlit – Frontend interface
-
-YOLOv8 (Ultralytics) – Object detection model for car damage detection
-
-OpenCV – Image annotation
-
-Groq API (LLaMA 3) – AI-generated repair and insurance assessment
-
-ReportLab – Generate PDF reports
-
-Pandas & NumPy – Data handling
-
-Dataset
-
-Trained on a Roboflow dataset with 22 car damage classes:
 ['Front-Windscreen-Damage', 'Headlight-Damage', 'Major-Rear-Bumper-Dent', 'Rear-windscreen-Damage', 'RunningBoard-Dent', 'Sidemirror-Damage', 'Signlight-Damage', 'Taillight-Damage', 'bonnet-dent', 'doorouter-dent', 'doorouter-scratch', 'fender-dent', 'front-bumper-dent', 'front-bumper-scratch', 'medium-Bodypanel-Dent', 'paint-chip', 'paint-trace', 'pillar-dent', 'quaterpanel-dent', 'rear-bumper-dent', 'rear-bumper-scratch', 'roof-dent']
 
+# ** 📂 Project Structure **
 
-Usage
+car-damage-ai/
+├─ app.py                  # Main Streamlit app
+├─ requirements.txt        # Python dependencies
+├─ runs/detect/train8/     # YOLOv8 trained weights folder
+├─ assets/                 # Optional demo images/screenshots
 
-Run the Streamlit app:
+# ** 💡 Future Improvements **
 
-streamlit run app.py
+Combine all detected damages in a single AI prompt for more accurate overall severity
 
-Upload a car image (jpg, jpeg, png).
+Add real-time webcam damage detection
 
-Click "🔍 Detect Damage".
+Integrate insurance APIs to generate instant claim estimates
 
-View:
+Add confidence threshold sliders in Streamlit for low-confidence detection filterin
 
-Annotated image with detected damages
 
-AI-generated repair and insurance assessment
 
-Downloadable PDF report
