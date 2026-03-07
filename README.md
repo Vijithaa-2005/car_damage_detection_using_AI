@@ -8,6 +8,10 @@
   - **Insurance claim guidance**
 - Built with **YOLOv8, Streamlit, OpenCV, and Groq AI**
 
+# DEMO 
+
+
+
 # ✨ Features
 
 - Detects **multiple damages** in a single car image
