@@ -22,7 +22,7 @@ st.title("🚗 AI Car Damage Detection & Insurance Assistant")
 # -------------------------
 @st.cache_resource
 def load_model():
-    model = YOLO("best.pt")  # Path to your trained YOLOv8 model
+    model = YOLO("best.pt")
     return model
 
 # -------------------------
@@ -40,7 +40,7 @@ def detect_damage(model, image):
 
         for box, conf, cls in zip(boxes, confs, classes):
             x1, y1, x2, y2 = map(int, box)
-            damage_type = model.names[int(cls)]  # use model's trained class names
+            damage_type = model.names[int(cls)]
 
             detections.append({
                 "Damage Type": damage_type,
@@ -50,7 +50,6 @@ def detect_damage(model, image):
                 "Height": y2 - y1
             })
 
-            # Draw rectangle and label
             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
             label = f"{damage_type} ({round(conf,2)})"
             cv2.putText(img, label, (x1, y1-10),
@@ -60,7 +59,7 @@ def detect_damage(model, image):
     return detections, img
 
 # -------------------------
-# AI Assessment for multiple damages
+# AI Assessment
 # -------------------------
 def get_ai_assessment(detections):
     if len(detections) == 0:
@@ -70,9 +69,8 @@ def get_ai_assessment(detections):
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         ai_results = []
 
-        # Cumulative area to flag severe damages
         total_area = sum([d['Width'] * d['Height'] for d in detections])
-        size_threshold = 50000  # adjust based on image resolution
+        size_threshold = 50000
 
         for d in detections:
             damage_desc = f"{d['Damage Type']} ({d['Width']}x{d['Height']} px), confidence {d['Confidence']}"
@@ -83,39 +81,34 @@ def get_ai_assessment(detections):
                 "2. Estimated severity (minor/moderate/severe)\n"
                 "3. Estimated repair time\n"
                 "4. Estimated cost in INR\n"
-                "5. Whether insurance claim is usually possible and explain why based on damage type and severity.\n"
+                "5. Insurance claim possibility with reason.\n"
             )
 
-            messages = [{"role": "user", "content": prompt}]
             completion = client.chat.completions.create(
                 model="llama-3.1-8b-instant",
-                messages=messages,
+                messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
-                max_completion_tokens=500,
-                top_p=1,
-                stream=False
+                max_completion_tokens=500
             )
 
             result_text = completion.choices[0].message.content
 
-            # Add rule-based size/severity note
             if (d['Width'] * d['Height']) > size_threshold:
-                result_text += "\n⚠️ Note: This damage is large. Consider severity as SEVERE."
+                result_text += "\n⚠️ Large damage → Consider SEVERE."
 
             ai_results.append(f"🔹 {d['Damage Type']}:\n{result_text}")
 
-        # Optional: show cumulative damage area
         if total_area > (size_threshold * len(detections)):
-            ai_results.append(f"\n⚠️ Total detected damage area is large ({total_area} px²). Consider overall severity as SEVERE.")
+            ai_results.append(f"\n⚠️ Overall damage is large → SEVERE.")
 
         return "\n\n".join(ai_results)
 
     except Exception as e:
-        st.warning(f"⚠️ AI assessment unavailable: {str(e)}")
-        return "AI assessment could not be generated."
+        st.warning(f"⚠️ AI error: {str(e)}")
+        return "AI assessment failed."
 
 # -------------------------
-# Generate PDF Report
+# PDF Report
 # -------------------------
 def generate_pdf(detections, ai_report):
     styles = getSampleStyleSheet()
@@ -126,16 +119,15 @@ def generate_pdf(detections, ai_report):
     story.append(Spacer(1, 20))
 
     if len(detections) == 0:
-        story.append(Paragraph("No damages detected in the uploaded image.", styles["Normal"]))
+        story.append(Paragraph("No damages detected.", styles["Normal"]))
     else:
         data = [["Damage Type", "Confidence", "Bounding Box"]]
         for d in detections:
             data.append([d["Damage Type"], str(d["Confidence"]), str(d["Bounding Box"])])
-        table = Table(data)
-        story.append(table)
+        story.append(Table(data))
 
         story.append(Spacer(1, 20))
-        story.append(Paragraph("AI Repair, Severity & Insurance Assessment", styles["Heading2"]))
+        story.append(Paragraph("AI Assessment", styles["Heading2"]))
         story.append(Paragraph(ai_report.replace("\n", "<br/>"), styles["Normal"]))
 
     story.append(Spacer(1, 20))
@@ -147,19 +139,31 @@ def generate_pdf(detections, ai_report):
     return temp.name
 
 # -------------------------
-# Upload Image & Run Detection
+# Upload Image
 # -------------------------
 uploaded = st.file_uploader("Upload Car Image", type=["jpg", "jpeg", "png"])
 
 if uploaded:
     image = Image.open(uploaded)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+
+    # ✅ Resize image (optional but recommended)
+    image = image.resize((400, 300))
+
+    # ✅ Center + Smaller Image
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.image(image, caption="Uploaded Image", width=300)
 
     if st.button("🔍 Detect Damage"):
         model = load_model()
         detections, annotated = detect_damage(model, image)
+
         st.subheader("Detected Damage")
-        st.image(annotated, caption="Detected Damage Areas", use_column_width=True)
+
+        # ✅ Center + Smaller Annotated Image
+        col1, col2, col3 = st.columns([1,2,1])
+        with col2:
+            st.image(annotated, caption="Detected Damage Areas", width=400)
 
         if len(detections) == 0:
             st.success("No damage detected")
@@ -167,15 +171,16 @@ if uploaded:
             df = pd.DataFrame(detections)
             st.dataframe(df)
 
-            st.subheader("🤖 AI Repair, Severity & Insurance Assessment")
-            with st.spinner("AI analyzing damage..."):
+            st.subheader("🤖 AI Assessment")
+            with st.spinner("Analyzing..."):
                 ai_report = get_ai_assessment(detections)
+
             st.write(ai_report)
 
             pdf_file = generate_pdf(detections, ai_report)
             with open(pdf_file, "rb") as f:
                 st.download_button(
-                    "📄 Download Damage Report",
+                    "📄 Download Report",
                     f,
                     file_name="car_damage_report.pdf"
                 )
