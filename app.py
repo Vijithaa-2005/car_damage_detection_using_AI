@@ -12,21 +12,35 @@ from datetime import datetime
 from groq import Groq
 
 # -------------------------
-# Page Setup
+# Page Setup (FIXED)
 # -------------------------
-st.set_page_config(page_title="AI Car Damage Detection", layout="wide")
+st.set_page_config(page_title="AI Car Damage Detection", layout="centered")
 st.title("🚗 AI Car Damage Detection & Insurance Assistant")
+
+# -------------------------
+# 🔥 FORCE SMALL IMAGE USING CSS
+# -------------------------
+st.markdown("""
+    <style>
+    img {
+        max-width: 300px !important;
+        height: auto !important;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # -------------------------
 # Load YOLO Model
 # -------------------------
 @st.cache_resource
 def load_model():
-    model = YOLO("best.pt")
-    return model
+    return YOLO("best.pt")
 
 # -------------------------
-# Detect Damage Function
+# Detect Damage
 # -------------------------
 def detect_damage(model, image):
     img = np.array(image)
@@ -51,8 +65,8 @@ def detect_damage(model, image):
             })
 
             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            label = f"{damage_type} ({round(conf,2)})"
-            cv2.putText(img, label, (x1, y1-10),
+            cv2.putText(img, f"{damage_type} ({round(conf,2)})",
+                        (x1, y1-10),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.7, (255, 0, 0), 2)
 
@@ -62,49 +76,49 @@ def detect_damage(model, image):
 # AI Assessment
 # -------------------------
 def get_ai_assessment(detections):
-    if len(detections) == 0:
+    if not detections:
         return "No damage detected."
 
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         ai_results = []
 
-        total_area = sum([d['Width'] * d['Height'] for d in detections])
+        total_area = sum(d['Width'] * d['Height'] for d in detections)
         size_threshold = 50000
 
         for d in detections:
-            damage_desc = f"{d['Damage Type']} ({d['Width']}x{d['Height']} px), confidence {d['Confidence']}"
-            prompt = (
-                f"A car image inspection detected the following damage: {damage_desc}\n\n"
-                "Provide:\n"
-                "1. Repair suggestion\n"
-                "2. Estimated severity (minor/moderate/severe)\n"
-                "3. Estimated repair time\n"
-                "4. Estimated cost in INR\n"
-                "5. Insurance claim possibility with reason.\n"
-            )
+            prompt = f"""
+            Damage: {d['Damage Type']} ({d['Width']}x{d['Height']} px), confidence {d['Confidence']}
 
-            completion = client.chat.completions.create(
+            Give:
+            1. Repair suggestion
+            2. Severity
+            3. Repair time
+            4. Cost in INR
+            5. Insurance claim possibility
+            """
+
+            response = client.chat.completions.create(
                 model="llama-3.1-8b-instant",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
                 max_completion_tokens=500
             )
 
-            result_text = completion.choices[0].message.content
+            text = response.choices[0].message.content
 
-            if (d['Width'] * d['Height']) > size_threshold:
-                result_text += "\n⚠️ Large damage → Consider SEVERE."
+            if d['Width'] * d['Height'] > size_threshold:
+                text += "\n⚠️ Large damage → SEVERE"
 
-            ai_results.append(f"🔹 {d['Damage Type']}:\n{result_text}")
+            ai_results.append(f"🔹 {d['Damage Type']}:\n{text}")
 
-        if total_area > (size_threshold * len(detections)):
-            ai_results.append(f"\n⚠️ Overall damage is large → SEVERE.")
+        if total_area > size_threshold * len(detections):
+            ai_results.append("\n⚠️ Overall damage is SEVERE")
 
         return "\n\n".join(ai_results)
 
     except Exception as e:
-        st.warning(f"⚠️ AI error: {str(e)}")
+        st.warning(f"AI Error: {e}")
         return "AI assessment failed."
 
 # -------------------------
@@ -115,13 +129,11 @@ def generate_pdf(detections, ai_report):
     temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     story = []
 
-    story.append(Paragraph("Car Damage Assessment Report", styles["Title"]))
+    story.append(Paragraph("Car Damage Report", styles["Title"]))
     story.append(Spacer(1, 20))
 
-    if len(detections) == 0:
-        story.append(Paragraph("No damages detected.", styles["Normal"]))
-    else:
-        data = [["Damage Type", "Confidence", "Bounding Box"]]
+    if detections:
+        data = [["Damage", "Confidence", "Box"]]
         for d in detections:
             data.append([d["Damage Type"], str(d["Confidence"]), str(d["Bounding Box"])])
         story.append(Table(data))
@@ -129,9 +141,11 @@ def generate_pdf(detections, ai_report):
         story.append(Spacer(1, 20))
         story.append(Paragraph("AI Assessment", styles["Heading2"]))
         story.append(Paragraph(ai_report.replace("\n", "<br/>"), styles["Normal"]))
+    else:
+        story.append(Paragraph("No damage detected.", styles["Normal"]))
 
     story.append(Spacer(1, 20))
-    story.append(Paragraph(f"Generated On: {datetime.now()}", styles["Normal"]))
+    story.append(Paragraph(f"Generated: {datetime.now()}", styles["Normal"]))
 
     pdf = SimpleDocTemplate(temp.name, pagesize=letter)
     pdf.build(story)
@@ -146,13 +160,11 @@ uploaded = st.file_uploader("Upload Car Image", type=["jpg", "jpeg", "png"])
 if uploaded:
     image = Image.open(uploaded)
 
-    # ✅ Resize image (optional but recommended)
+    # Optional resize for performance
     image = image.resize((400, 300))
 
-    # ✅ Center + Smaller Image
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        st.image(image, caption="Uploaded Image", width=300)
+    # ✅ SMALL IMAGE (CSS controlled)
+    st.image(image, caption="Uploaded Image")
 
     if st.button("🔍 Detect Damage"):
         model = load_model()
@@ -160,12 +172,10 @@ if uploaded:
 
         st.subheader("Detected Damage")
 
-        # ✅ Center + Smaller Annotated Image
-        col1, col2, col3 = st.columns([1,2,1])
-        with col2:
-            st.image(annotated, caption="Detected Damage Areas", width=400)
+        # ✅ SMALL IMAGE (CSS controlled)
+        st.image(annotated, caption="Detected Damage Areas")
 
-        if len(detections) == 0:
+        if not detections:
             st.success("No damage detected")
         else:
             df = pd.DataFrame(detections)
@@ -179,8 +189,4 @@ if uploaded:
 
             pdf_file = generate_pdf(detections, ai_report)
             with open(pdf_file, "rb") as f:
-                st.download_button(
-                    "📄 Download Report",
-                    f,
-                    file_name="car_damage_report.pdf"
-                )
+                st.download_button("📄 Download Report", f, "car_damage_report.pdf")
