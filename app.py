@@ -20,18 +20,18 @@ st.set_page_config(page_title="AI Car Damage Detection", layout="centered")
 st.title("🚗 AI Car Damage Detection & Insurance Assistant")
 
 # -------------------------
-# 🔥 FUNCTION TO FORCE SMALL IMAGE
+# 🔥 FUNCTION TO SHOW SMALL IMAGE
 # -------------------------
 def display_small_image(img, caption=""):
     buffered = BytesIO()
-    img = img.convert("RGB")  # ensure compatibility
+    img = img.convert("RGB")
     img.save(buffered, format="JPEG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
 
     st.markdown(
         f"""
         <div style="text-align: center;">
-            <img src="data:image/jpeg;base64,{img_str}" width="300"/>
+            <img src="data:image/jpeg;base64,{img_str}" width="250"/>
             <p style="font-size:14px;">{caption}</p>
         </div>
         """,
@@ -89,12 +89,9 @@ def get_ai_assessment(detections):
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         ai_results = []
 
-        total_area = sum(d['Width'] * d['Height'] for d in detections)
-        size_threshold = 50000
-
         for d in detections:
             prompt = f"""
-            Damage: {d['Damage Type']} ({d['Width']}x{d['Height']} px), confidence {d['Confidence']}
+            Damage: {d['Damage Type']} ({d['Width']}x{d['Height']} px)
 
             Give:
             1. Repair suggestion
@@ -112,14 +109,7 @@ def get_ai_assessment(detections):
             )
 
             text = response.choices[0].message.content
-
-            if d['Width'] * d['Height'] > size_threshold:
-                text += "\n⚠️ Large damage → SEVERE"
-
             ai_results.append(f"🔹 {d['Damage Type']}:\n{text}")
-
-        if total_area > size_threshold * len(detections):
-            ai_results.append("\n⚠️ Overall damage is SEVERE")
 
         return "\n\n".join(ai_results)
 
@@ -166,8 +156,8 @@ uploaded = st.file_uploader("Upload Car Image", type=["jpg", "jpeg", "png"])
 if uploaded:
     image = Image.open(uploaded)
 
-    # Optional resize (performance)
-    image = image.resize((300, 300))
+    # Optional resize for speed
+    image = image.resize((400, 300))
 
     # ✅ SMALL IMAGE DISPLAY
     display_small_image(image, "Uploaded Image")
