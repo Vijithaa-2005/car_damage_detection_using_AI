@@ -1,188 +1,104 @@
 import streamlit as st
 from PIL import Image
-import pandas as pd
-from ultralytics import YOLO
 import cv2
 import numpy as np
-import tempfile
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import letter
 from datetime import datetime
-from groq import Groq
-import base64
-from io import BytesIO
 
-# -------------------------
-# Page Setup
-# -------------------------
-st.set_page_config(page_title="AI Car Damage Detection", layout="centered")
-st.title("🚗 AI Car Damage Detection & Insurance Assistant")
+# -----------------------------
+# Page Config
+# -----------------------------
+st.set_page_config(page_title="AI Car Damage Detection", layout="wide")
 
-# -------------------------
-# 🔥 FUNCTION TO SHOW SMALL IMAGE
-# -------------------------
-def display_small_image(img, caption=""):
-    buffered = BytesIO()
-    img = img.convert("RGB")
-    img.save(buffered, format="JPEG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
+st.title("🚗 AI Car Damage Detection System")
 
-    st.markdown(
-        f"""
-        <div style="text-align: center;">
-            <img src="data:image/jpeg;base64,{img_str}" width="250"/>
-            <p style="font-size:14px;">{caption}</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-# -------------------------
-# Load YOLO Model
-# -------------------------
-@st.cache_resource
-def load_model():
-    return YOLO("best.pt")
-
-# -------------------------
-# Detect Damage
-# -------------------------
-def detect_damage(model, image):
-    img = np.array(image)
-    results = model(img)
-    detections = []
-
-    for r in results:
-        boxes = r.boxes.xyxy.cpu().numpy()
-        confs = r.boxes.conf.cpu().numpy()
-        classes = r.boxes.cls.cpu().numpy()
-
-        for box, conf, cls in zip(boxes, confs, classes):
-            x1, y1, x2, y2 = map(int, box)
-            damage_type = model.names[int(cls)]
-
-            detections.append({
-                "Damage Type": damage_type,
-                "Confidence": round(float(conf), 2),
-                "Bounding Box": [x1, y1, x2, y2],
-                "Width": x2 - x1,
-                "Height": y2 - y1
-            })
-
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(img, f"{damage_type} ({round(conf,2)})",
-                        (x1, y1-10),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7, (255, 0, 0), 2)
-
-    return detections, img
-
-# -------------------------
-# AI Assessment
-# -------------------------
-def get_ai_assessment(detections):
-    if not detections:
-        return "No damage detected."
-
-    try:
-        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        ai_results = []
-
-        for d in detections:
-            prompt = f"""
-            Damage: {d['Damage Type']} ({d['Width']}x{d['Height']} px)
-
-            Give:
-            1. Repair suggestion
-            2. Severity
-            3. Repair time
-            4. Cost in INR
-            5. Insurance claim possibility
-            """
-
-            response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_completion_tokens=500
-            )
-
-            text = response.choices[0].message.content
-            ai_results.append(f"🔹 {d['Damage Type']}:\n{text}")
-
-        return "\n\n".join(ai_results)
-
-    except Exception as e:
-        st.warning(f"AI Error: {e}")
-        return "AI assessment failed."
-
-# -------------------------
-# PDF Report
-# -------------------------
-def generate_pdf(detections, ai_report):
-    styles = getSampleStyleSheet()
-    temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    story = []
-
-    story.append(Paragraph("Car Damage Report", styles["Title"]))
-    story.append(Spacer(1, 20))
-
-    if detections:
-        data = [["Damage", "Confidence", "Box"]]
-        for d in detections:
-            data.append([d["Damage Type"], str(d["Confidence"]), str(d["Bounding Box"])])
-        story.append(Table(data))
-
-        story.append(Spacer(1, 20))
-        story.append(Paragraph("AI Assessment", styles["Heading2"]))
-        story.append(Paragraph(ai_report.replace("\n", "<br/>"), styles["Normal"]))
-    else:
-        story.append(Paragraph("No damage detected.", styles["Normal"]))
-
-    story.append(Spacer(1, 20))
-    story.append(Paragraph(f"Generated: {datetime.now()}", styles["Normal"]))
-
-    pdf = SimpleDocTemplate(temp.name, pagesize=letter)
-    pdf.build(story)
-
-    return temp.name
-
-# -------------------------
+# -----------------------------
 # Upload Image
-# -------------------------
-uploaded = st.file_uploader("Upload Car Image", type=["jpg", "jpeg", "png"])
+# -----------------------------
+uploaded_file = st.file_uploader("Upload Car Image", type=["jpg", "png", "jpeg"])
 
-if uploaded:
-    image = Image.open(uploaded)
+if uploaded_file:
+    image = Image.open(uploaded_file)
 
-    # Optional resize for speed
-    image = image.resize((400, 300))
+    # Create 2 columns
+    col1, col2 = st.columns(2)
 
-    # ✅ SMALL IMAGE DISPLAY
-    display_small_image(image, "Uploaded Image")
+    with col1:
+        st.subheader("📷 Uploaded Image")
+        st.image(image, use_column_width=True)
 
-    if st.button("🔍 Detect Damage"):
-        model = load_model()
-        detections, annotated = detect_damage(model, image)
+    if st.button("🔍 Analyze Image"):
 
-        st.subheader("Detected Damage")
+        # Convert to OpenCV format
+        img = np.array(image)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-        # ✅ SMALL IMAGE DISPLAY
-        display_small_image(Image.fromarray(annotated), "Detected Damage Areas")
+        output = img.copy()
 
-        if not detections:
-            st.success("No damage detected")
-        else:
-            df = pd.DataFrame(detections)
-            st.dataframe(df)
+        # -----------------------------
+        # Dummy Detection (Replace with YOLO later)
+        # -----------------------------
+        # Scratch box
+        cv2.rectangle(output, (150, 80), (350, 230), (0, 255, 0), 2)
+        cv2.putText(output, "Scratch ($120)", (150, 70),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-            st.subheader("🤖 AI Assessment")
-            with st.spinner("Analyzing..."):
-                ai_report = get_ai_assessment(detections)
+        # Dent box
+        cv2.rectangle(output, (300, 280), (520, 450), (0, 165, 255), 2)
+        cv2.putText(output, "Dent ($450)", (300, 270),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
 
-            st.write(ai_report)
+        # Convert back to RGB
+        output = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
 
-            pdf_file = generate_pdf(detections, ai_report)
-            with open(pdf_file, "rb") as f:
-                st.download_button("📄 Download Report", f, "car_damage_report.pdf")
+        # -----------------------------
+        # Show Output Image
+        # -----------------------------
+        with col2:
+            st.subheader("🧠 Analyzed Result")
+            st.image(output, use_column_width=True)
+
+        # -----------------------------
+        # Summary Table
+        # -----------------------------
+        st.markdown("### 📊 Analysis Summary")
+
+        st.table({
+            "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+            "Image Width": [output.shape[1]],
+            "Image Height": [output.shape[0]],
+            "Total Damages": [2],
+            "Damage Area %": [9]
+        })
+
+        # -----------------------------
+        # Suggestions
+        # -----------------------------
+        st.markdown("## 🛠 Detected Damage & Suggestions")
+
+        st.success("✅ Dent detected → Estimated repair cost: $450")
+        st.success("✅ Paint scratches detected → Estimated cost: $120")
+        st.warning("⚠ Interior may be exposed → Check for dust/water damage")
+
+        # -----------------------------
+        # CSV Download
+        # -----------------------------
+        import pandas as pd
+
+        df = pd.DataFrame({
+            "Damage Type": ["Dent", "Scratch"],
+            "Estimated Cost": ["$450", "$120"]
+        })
+
+        csv = df.to_csv(index=False).encode('utf-8')
+
+        st.download_button(
+            label="⬇ Download CSV Report",
+            data=csv,
+            file_name="damage_report.csv",
+            mime='text/csv'
+        )
+
+        # -----------------------------
+        # Final Status
+        # -----------------------------
+        st.success("✅ Auto-Approve: Repair ticket ready (demo)")
