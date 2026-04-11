@@ -10,27 +10,33 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import letter
 from datetime import datetime
 from groq import Groq
+import base64
+from io import BytesIO
 
 # -------------------------
-# Page Setup (FIXED)
+# Page Setup
 # -------------------------
 st.set_page_config(page_title="AI Car Damage Detection", layout="centered")
 st.title("🚗 AI Car Damage Detection & Insurance Assistant")
 
 # -------------------------
-# 🔥 FORCE SMALL IMAGE USING CSS
+# 🔥 FUNCTION TO FORCE SMALL IMAGE
 # -------------------------
-st.markdown("""
-    <style>
-    img {
-        max-width: 300px !important;
-        height: auto !important;
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-    }
-    </style>
-""", unsafe_allow_html=True)
+def display_small_image(img, caption=""):
+    buffered = BytesIO()
+    img = img.convert("RGB")  # ensure compatibility
+    img.save(buffered, format="JPEG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+
+    st.markdown(
+        f"""
+        <div style="text-align: center;">
+            <img src="data:image/jpeg;base64,{img_str}" width="300"/>
+            <p style="font-size:14px;">{caption}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # -------------------------
 # Load YOLO Model
@@ -160,11 +166,11 @@ uploaded = st.file_uploader("Upload Car Image", type=["jpg", "jpeg", "png"])
 if uploaded:
     image = Image.open(uploaded)
 
-    # Optional resize for performance
-    image = image.resize((400, 300))
+    # Optional resize (performance)
+    image = image.resize((300, 300))
 
-    # ✅ SMALL IMAGE (CSS controlled)
-    st.image(image, caption="Uploaded Image")
+    # ✅ SMALL IMAGE DISPLAY
+    display_small_image(image, "Uploaded Image")
 
     if st.button("🔍 Detect Damage"):
         model = load_model()
@@ -172,8 +178,8 @@ if uploaded:
 
         st.subheader("Detected Damage")
 
-        # ✅ SMALL IMAGE (CSS controlled)
-        st.image(annotated, caption="Detected Damage Areas")
+        # ✅ SMALL IMAGE DISPLAY
+        display_small_image(Image.fromarray(annotated), "Detected Damage Areas")
 
         if not detections:
             st.success("No damage detected")
