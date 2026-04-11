@@ -5,105 +5,63 @@ import numpy as np
 from datetime import datetime
 import pandas as pd
 
-# -----------------------------
-# Page Config
-# -----------------------------
-st.set_page_config(page_title="AI Car Damage Detection", layout="wide")
+st.set_page_config(layout="wide")
 
-# Reduce spacing (important for screenshot)
-st.markdown("""
-    <style>
-    .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.title("🚗 AI Car Damage Detection")
 
-st.title("🚗 AI Car Damage Detection System")
+# Resize function
+def resize_image(img, max_width=400):
+    h, w = img.shape[:2]
+    if w > max_width:
+        ratio = max_width / w
+        new_h = int(h * ratio)
+        img = cv2.resize(img, (max_width, new_h))
+    return img
 
-# -----------------------------
-# Upload Image
-# -----------------------------
-uploaded_file = st.file_uploader("Upload Car Image", type=["jpg", "png", "jpeg"])
+uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"])
 
 if uploaded_file:
     image = Image.open(uploaded_file)
+    img = np.array(image)
 
-    if st.button("🔍 Analyze Image"):
+    if st.button("Analyze Image"):
 
-        # Convert to OpenCV
-        img = np.array(image)
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        # Convert
+        img_cv = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        output = img_cv.copy()
 
-        output = img.copy()
-
-        # -----------------------------
-        # Dummy Detection (Replace with YOLO)
-        # -----------------------------
+        # Dummy boxes
         cv2.rectangle(output, (150, 80), (350, 230), (0, 255, 0), 2)
-        cv2.putText(output, "Scratch ($120)", (150, 70),
+        cv2.putText(output, "Scratch", (150, 70),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
         cv2.rectangle(output, (300, 280), (520, 450), (0, 165, 255), 2)
-        cv2.putText(output, "Dent ($450)", (300, 270),
+        cv2.putText(output, "Dent", (300, 270),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
 
-        output = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
+        # Resize BOTH images
+        img_small = resize_image(img_cv, 350)
+        output_small = resize_image(output, 350)
 
-        # -----------------------------
-        # SIDE BY SIDE IMAGES (SMALL SIZE)
-        # -----------------------------
+        # Convert back
+        img_small = cv2.cvtColor(img_small, cv2.COLOR_BGR2RGB)
+        output_small = cv2.cvtColor(output_small, cv2.COLOR_BGR2RGB)
+
+        # Show side-by-side
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("📷 Uploaded Image")
-            st.image(image, width=350)   # 🔥 FIXED SIZE
+            st.subheader("Uploaded")
+            st.image(img_small)
 
         with col2:
-            st.subheader("🧠 Analyzed Result")
-            st.image(output, width=350)  # 🔥 FIXED SIZE
+            st.subheader("Output")
+            st.image(output_small)
 
-        # -----------------------------
-        # SUMMARY TABLE
-        # -----------------------------
-        st.markdown("### 📊 Analysis Summary")
+        # Info
+        st.write("### Summary")
+        st.write(f"Time: {datetime.now()}")
+        st.write("Damages: 2")
 
-        st.table({
-            "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-            "Image Width": [output.shape[1]],
-            "Image Height": [output.shape[0]],
-            "Total Damages": [2],
-            "Damage Area %": [9]
-        })
-
-        # -----------------------------
-        # SUGGESTIONS
-        # -----------------------------
-        st.markdown("## 🛠 Detected Damage & Suggestions")
-
-        st.success("✅ Dent detected → Estimated repair cost: $450")
-        st.success("✅ Paint scratches detected → Estimated cost: $120")
-        st.warning("⚠ Interior may be exposed → Check for damage")
-
-        # -----------------------------
-        # CSV DOWNLOAD
-        # -----------------------------
-        df = pd.DataFrame({
-            "Damage Type": ["Dent", "Scratch"],
-            "Estimated Cost": ["$450", "$120"]
-        })
-
-        csv = df.to_csv(index=False).encode('utf-8')
-
-        st.download_button(
-            label="⬇ Download CSV Report",
-            data=csv,
-            file_name="damage_report.csv",
-            mime='text/csv'
-        )
-
-        # -----------------------------
-        # FINAL STATUS
-        # -----------------------------
-        st.success("✅ Auto-Approve: Repair ticket ready (demo)")
+        st.success("Dent → $450")
+        st.success("Scratch → $120")
