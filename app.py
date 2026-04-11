@@ -3,11 +3,22 @@ from PIL import Image
 import cv2
 import numpy as np
 from datetime import datetime
+import pandas as pd
 
 # -----------------------------
 # Page Config
 # -----------------------------
 st.set_page_config(page_title="AI Car Damage Detection", layout="wide")
+
+# Reduce spacing (important for screenshot)
+st.markdown("""
+    <style>
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("🚗 AI Car Damage Detection System")
 
@@ -19,46 +30,42 @@ uploaded_file = st.file_uploader("Upload Car Image", type=["jpg", "png", "jpeg"]
 if uploaded_file:
     image = Image.open(uploaded_file)
 
-    # Create 2 columns
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("📷 Uploaded Image")
-        st.image(image, use_column_width=True)
-
     if st.button("🔍 Analyze Image"):
 
-        # Convert to OpenCV format
+        # Convert to OpenCV
         img = np.array(image)
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
         output = img.copy()
 
         # -----------------------------
-        # Dummy Detection (Replace with YOLO later)
+        # Dummy Detection (Replace with YOLO)
         # -----------------------------
-        # Scratch box
         cv2.rectangle(output, (150, 80), (350, 230), (0, 255, 0), 2)
         cv2.putText(output, "Scratch ($120)", (150, 70),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-        # Dent box
         cv2.rectangle(output, (300, 280), (520, 450), (0, 165, 255), 2)
         cv2.putText(output, "Dent ($450)", (300, 270),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
 
-        # Convert back to RGB
         output = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
 
         # -----------------------------
-        # Show Output Image
+        # SIDE BY SIDE IMAGES (SMALL SIZE)
         # -----------------------------
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("📷 Uploaded Image")
+            st.image(image, width=350)   # 🔥 FIXED SIZE
+
         with col2:
             st.subheader("🧠 Analyzed Result")
-            st.image(output, use_column_width=True)
+            st.image(output, width=350)  # 🔥 FIXED SIZE
 
         # -----------------------------
-        # Summary Table
+        # SUMMARY TABLE
         # -----------------------------
         st.markdown("### 📊 Analysis Summary")
 
@@ -71,19 +78,17 @@ if uploaded_file:
         })
 
         # -----------------------------
-        # Suggestions
+        # SUGGESTIONS
         # -----------------------------
         st.markdown("## 🛠 Detected Damage & Suggestions")
 
         st.success("✅ Dent detected → Estimated repair cost: $450")
         st.success("✅ Paint scratches detected → Estimated cost: $120")
-        st.warning("⚠ Interior may be exposed → Check for dust/water damage")
+        st.warning("⚠ Interior may be exposed → Check for damage")
 
         # -----------------------------
-        # CSV Download
+        # CSV DOWNLOAD
         # -----------------------------
-        import pandas as pd
-
         df = pd.DataFrame({
             "Damage Type": ["Dent", "Scratch"],
             "Estimated Cost": ["$450", "$120"]
@@ -99,6 +104,6 @@ if uploaded_file:
         )
 
         # -----------------------------
-        # Final Status
+        # FINAL STATUS
         # -----------------------------
         st.success("✅ Auto-Approve: Repair ticket ready (demo)")
